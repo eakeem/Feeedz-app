@@ -1,0 +1,27 @@
+{
+  "name": "feeedz",
+  "version": "1.0.0",
+  "private": true,
+  "description": "feeedz event discovery, promoter, admin, and backend platform for Jamaica.",
+  "workspaces": [
+    "apps/*",
+    "services/*"
+  ],
+  "scripts": {
+    "mobile": "npm run start -w @feeedz/mobile",
+    "api": "npm run start:dev -w @feeedz/api",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "overrides": {
+    "@nestjs/common": "^11.1.28",
+    "@nestjs/core": "^11.1.28",
+    "@nestjs/platform-express": "^11.1.28"
+  },
+  "dependencies": {
+    "@nestjs/platform-express": "^11.1.28"
+  }
+}

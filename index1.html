@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>feeedz</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+:root{
+  --bg:#050505;--bg2:#0a0a0a;--card:#111;--card2:#181818;--border:#1e1e1e;--border2:#2a2a2a;
+  --fg:#f0f0f0;--fg2:#bbb;--fg3:#777;--fg4:#444;
+  --accent:#00ff88;--accent2:rgba(0,255,136,.12);--accent3:rgba(0,255,136,.35);
+  --gold:#FFD700;--gold2:rgba(255,215,0,.12);
+  --magenta:#FF006E;--magenta2:rgba(255,0,110,.12);
+  --cyan:#00B4D8;--orange:#FF6B35;--purple:#A855F7;--pink:#F472B6;--emerald:#34D399;
+  --r:16px;--rs:10px;--rx:6px;
+  --font:'DM Sans',sans-serif;--font2:'Space Grotesk',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--font);background:#111;color:var(--fg);overflow:hidden;height:100dvh;width:100vw;-webkit-font-smoothing:antialiased}
+#app{width:100%;max-width:430px;height:100dvh;margin:0 auto;position:relative;overflow:hidden;background:var(--bg)}
+@media(min-width:431px){body{display:flex;align-items:center;justify-content:center}#app{height:92dvh;border-radius:44px;border:2px solid var(--border);box-shadow:0 0 100px rgba(0,255,136,.04),0 20px 80px rgba(0,0,0,.7)}}
+.noise{position:fixed;inset:0;pointer-events:none;z-index:9999;opacity:.025;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+#bg-canvas{position:absolute;inset:0;z-index:0;pointer-events:none}
+.status-bar{height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;font-size:13px;font-weight:600;position:relative;z-index:100;flex-shrink:0}
+.status-bar .time{font-family:var(--font2);font-weight:700}
+.status-bar .icons{display:flex;gap:6px;align-items:center;font-size:14px}
+#screen{position:absolute;top:0;left:0;width:100%;height:100%;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;z-index:10}
+#screen::-webkit-scrollbar{display:none}
+.screen-pad{padding:0 20px 110px;min-height:100%}
+#bottom-nav{position:absolute;bottom:0;left:0;right:0;height:84px;background:linear-gradient(to top,var(--bg) 65%,transparent);display:flex;align-items:flex-end;justify-content:space-around;padding-bottom:18px;z-index:200;transition:transform .3s ease}
+.nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--fg4);font-size:10px;font-weight:500;cursor:pointer;transition:.25s;padding:8px 14px;border-radius:14px;user-select:none;-webkit-tap-highlight-color:transparent}
+.nav-item i{font-size:20px;transition:.25s}
+.nav-item.active{color:var(--accent)}
+.nav-item.active i{filter:drop-shadow(0 0 8px var(--accent3))}
+.nav-item:active{transform:scale(.92)}
+#toast-container{position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:9000;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;width:90%;max-width:400px}
+.toast{padding:14px 20px;border-radius:var(--rs);font-size:13px;font-weight:500;backdrop-filter:blur(20px);border:1px solid var(--border2);animation:toastIn .35s ease forwards;pointer-events:auto;width:100%;text-align:center}
+.toast.success{background:rgba(0,255,136,.12);color:var(--accent);border-color:rgba(0,255,136,.2)}
+.toast.error{background:rgba(255,0,110,.12);color:var(--magenta);border-color:rgba(255,0,110,.2)}
+.toast.info{background:rgba(0,180,216,.12);color:var(--cyan);border-color:rgba(0,180,216,.2)}
+.toast.out{animation:toastOut .3s ease forwards}
+@keyframes toastIn{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes toastOut{to{opacity:0;transform:translateY(-20px)}}
+#modal-overlay{position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);display:none;align-items:flex-end;justify-content:center}
+#modal-overlay.show{display:flex}
+.bottom-sheet{width:100%;max-width:430px;background:var(--card);border-radius:var(--r) var(--r) 0 0;padding:12px 20px 36px;animation:sheetUp .35s cubic-bezier(.32,.72,0,1) forwards;max-height:85vh;overflow-y:auto}
+.bottom-sheet .handle{width:36px;height:4px;background:var(--fg4);border-radius:2px;margin:0 auto 16px}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.section-head{display:flex;align-items:center;justify-content:space-between;margin:28px 0 14px}
+.section-head h2{font-family:var(--font2);font-size:20px;font-weight:700}
+.section-head a{font-size:13px;color:var(--accent);cursor:pointer;font-weight:500}
+.h-scroll{display:flex;gap:14px;overflow-x:auto;scrollbar-width:none;padding:4px 0 8px;-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory}
+.h-scroll::-webkit-scrollbar{display:none}
+.event-card-v{width:260px;flex-shrink:0;border-radius:var(--r);overflow:hidden;background:var(--card);scroll-snap-align:start;cursor:pointer;transition:transform .2s;border:1px solid var(--border);position:relative}
+.event-card-v:active{transform:scale(.97)}
+.event-card-v .img{width:100%;height:170px;object-fit:cover;display:block}
+.event-card-v .overlay{position:absolute;top:0;left:0;right:0;height:170px;background:linear-gradient(to top,rgba(0,0,0,.75) 0%,transparent 60%);pointer-events:none}
+.event-card-v .body{padding:12px 14px 14px}
+.event-card-v .title{font-family:var(--font2);font-size:15px;font-weight:700;margin-bottom:6px;line-height:1.3}
+.event-card-v .meta{font-size:12px;color:var(--fg3);display:flex;flex-direction:column;gap:3px}
+.event-card-v .meta i{width:14px;color:var(--fg4)}
+.event-card-h{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:background .2s;align-items:center}
+.event-card-h:active{background:var(--card)}
+.event-card-h .img{width:90px;height:90px;border-radius:var(--rs);object-fit:cover;flex-shrink:0}
+.event-card-h .info{flex:1;min-width:0}
+.event-card-h .title{font-family:var(--font2);font-size:14px;font-weight:700;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.event-card-h .meta{font-size:11px;color:var(--fg3);display:flex;flex-direction:column;gap:2px}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;position:absolute;z-index:2}
+.badge-genre{top:10px;left:10px}
+.badge-live{top:10px;right:10px;background:var(--magenta);color:#fff;animation:livePulse 1.5s ease infinite}
+.badge-price{bottom:176px;right:10px;background:rgba(0,0,0,.7);color:var(--gold);backdrop-filter:blur(8px);border:1px solid rgba(255,215,0,.2);font-size:11px}
+@keyframes livePulse{0%,100%{box-shadow:0 0 0 0 rgba(255,0,110,.5)}50%{box-shadow:0 0 0 8px rgba(255,0,110,0)}}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 28px;border-radius:var(--rs);font-size:14px;font-weight:600;font-family:var(--font);border:none;cursor:pointer;transition:.25s;user-select:none;-webkit-tap-highlight-color:transparent;width:100%}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:var(--accent);color:#000}
+.btn-primary:hover{box-shadow:0 0 24px var(--accent3)}
+.btn-secondary{background:var(--card2);color:var(--fg);border:1px solid var(--border2)}
+.btn-outline{background:transparent;color:var(--accent);border:1px solid var(--accent3)}
+.btn-danger{background:var(--magenta2);color:var(--magenta);border:1px solid rgba(255,0,110,.2)}
+.btn-gold{background:var(--gold);color:#000}
+.btn-sm{padding:10px 18px;font-size:12px;border-radius:var(--rx)}
+.btn-icon{width:44px;height:44px;padding:0;border-radius:12px}
+.input-group{margin-bottom:18px}
+.input-group label{display:block;font-size:12px;font-weight:600;color:var(--fg3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.input-group input,.input-group select,.input-group textarea{width:100%;padding:13px 16px;background:var(--card);border:1px solid var(--border);border-radius:var(--rs);color:var(--fg);font-size:14px;font-family:var(--font);outline:none;transition:.25s;-webkit-appearance:none}
+.input-group input:focus,.input-group select:focus,.input-group textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent2)}
+.input-group textarea{resize:vertical;min-height:80px}
+.input-group select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23777' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;transition:.2s;border:1px solid var(--border);background:var(--card);color:var(--fg3);user-select:none;-webkit-tap-highlight-color:transparent}
+.chip.active{border-color:var(--accent);color:var(--accent);background:var(--accent2)}
+.chip:active{transform:scale(.95)}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:18px;position:relative;overflow:hidden}
+.stat-card .stat-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:10px}
+.stat-card .stat-val{font-family:var(--font2);font-size:24px;font-weight:800}
+.stat-card .stat-label{font-size:12px;color:var(--fg3);margin-top:2px}
+.photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:3px}
+.photo-grid img{width:100%;aspect-ratio:1;object-fit:cover;cursor:pointer;transition:opacity .2s}
+.photo-grid img:active{opacity:.7}
+.fab{position:fixed;bottom:100px;right:calc(50% - 195px);width:56px;height:56px;border-radius:50%;background:var(--accent);color:#000;border:none;font-size:22px;cursor:pointer;box-shadow:0 4px 20px var(--accent3);z-index:150;display:flex;align-items:center;justify-content:center;transition:.25s}
+.fab:active{transform:scale(.9)}
+@media(max-width:430px){.fab{right:20px}}
+.progress-bar{width:100%;height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin:10px 0}
+.progress-bar .fill{height:100%;background:var(--accent);border-radius:2px;transition:width .3s ease}
+.detail-hero{width:100%;height:280px;position:relative;overflow:hidden}
+.detail-hero img{width:100%;height:100%;object-fit:cover}
+.detail-hero .gradient{position:absolute;inset:0;background:linear-gradient(to top,var(--bg) 0%,rgba(5,5,5,.3) 50%,transparent 100%)}
+.back-btn{position:absolute;top:14px;left:14px;width:38px;height:38px;border-radius:50%;background:rgba(0,0,0,.5);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:10;font-size:16px;transition:.2s}
+.back-btn:active{transform:scale(.9)}
+.search-bar{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:var(--rs);padding:0 16px;transition:.25s}
+.search-bar:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent2)}
+.search-bar input{flex:1;background:none;border:none;outline:none;color:var(--fg);font-size:14px;padding:13px 0;font-family:var(--font)}
+.search-bar input::placeholder{color:var(--fg4)}
+.search-bar i{color:var(--fg4);font-size:16px}
+.tab-row{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px 0}
+.tab-row::-webkit-scrollbar{display:none}
+.tab{padding:9px 18px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:.2s;background:var(--card);color:var(--fg3);border:1px solid var(--border);user-select:none;-webkit-tap-highlight-color:transparent}
+.tab.active{background:var(--accent);color:#000;border-color:var(--accent)}
+.tab:active{transform:scale(.95)}
+.admin-table{width:100%;border-collapse:collapse;font-size:12px}
+.admin-table th{text-align:left;padding:10px 8px;color:var(--fg3);font-weight:600;border-bottom:1px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+.admin-table td{padding:10px 8px;border-bottom:1px solid var(--border);color:var(--fg2)}
+.admin-table tr:active{background:var(--card)}
+.splash-logo{font-family:var(--font2);font-size:56px;font-weight:800;letter-spacing:-2px;user-select:none}
+.splash-logo .e{color:var(--accent);text-shadow:0 0 30px var(--accent3),0 0 60px rgba(0,255,136,.15)}
+.splash-sub{color:var(--fg3);font-size:14px;margin-top:12px;letter-spacing:1px;text-transform:uppercase;font-weight:500}
+.splash-dots{display:flex;gap:6px;margin-top:40px}
+.splash-dots span{width:6px;height:6px;border-radius:50%;background:var(--fg4);animation:dotBounce 1.2s ease infinite}
+.splash-dots span:nth-child(2){animation-delay:.2s}
+.splash-dots span:nth-child(3){animation-delay:.4s}
+@keyframes dotBounce{0%,100%{opacity:.3;transform:scale(1)}50%{opacity:1;transform:scale(1.4);background:var(--accent)}}
+@keyframes fadeInUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.anim-up{animation:fadeInUp .5s ease forwards;opacity:0}
+.anim-in{animation:fadeIn .4s ease forwards;opacity:0}
+.delay-1{animation-delay:.1s}.delay-2{animation-delay:.2s}.delay-3{animation-delay:.3s}.delay-4{animation-delay:.4s}.delay-5{animation-delay:.5s}.delay-6{animation-delay:.6s}
+.lightbox{position:fixed;inset:0;z-index:6000;background:rgba(0,0,0,.95);display:none;align-items:center;justify-content:center;cursor:pointer}
+.lightbox.show{display:flex}
+.lightbox img{max-width:95%;max-height:85vh;object-fit:contain;border-radius:8px}
+.map-container{width:100%;height:400px;background:var(--bg2);border-radius:var(--r);position:relative;overflow:hidden;border:1px solid var(--border)}
+.map-pin{position:absolute;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.2s;z-index:5}
+.map-pin i{font-size:24px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.5))}
+.map-pin:active{transform:scale(1.2)}
+.map-pin .pin-label{position:absolute;top:36px;left:50%;transform:translateX(-50%);white-space:nowrap;background:var(--card);padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid var(--border);pointer-events:none;opacity:0;transition:.2s}
+.map-pin:hover .pin-label,.map-pin:active .pin-label{opacity:1}
+.otp-inputs{display:flex;gap:10px;justify-content:center}
+.otp-inputs input{width:48px;height:56px;text-align:center;font-size:22px;font-family:var(--font2);font-weight:700;background:var(--card);border:2px solid var(--border);border-radius:var(--rs);color:var(--fg);outline:none;transition:.25s}
+.otp-inputs input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent2)}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<div class="noise"></div>
+<div id="app">
+  <canvas id="bg-canvas"></canvas>
+  <div class="status-bar" id="status-bar">
+    <span class="time" id="clock">9:41</span>
+    <span class="icons"><i class="fas fa-signal"></i> <i class="fas fa-wifi"></i> <i class="fas fa-battery-full"></i></span>
+  </div>
+  <div id="screen"></div>
+  <nav id="bottom-nav"></nav>
+  <div id="toast-container"></div>
+  <div id="modal-overlay" onclick="closeModal()"><div class="bottom-sheet" id="modal-content" onclick="event.stopPropagation()"></div></div>
+  <div class="lightbox" id="lightbox" onclick="this.classList.remove('show')"><img id="lightbox-img" src="" alt="Full size photo"></div>
+</div>
+
+<script>
+/* ============================================================
+   DATA
+   ============================================================ */
+const PARISHES = ['Kingston','St. Andrew','St. Catherine','Manchester','St. James','Westmoreland','St. Ann','St. Mary','Portland','St. Thomas','St. Elizabeth','Hanover','Trelawny','Clarendon'];
+const GENRES = [
+  {name:'Dancehall',color:'#00ff88',bg:'rgba(0,255,136,.12)'},
+  {name:'Reggae',color:'#FFD700',bg:'rgba(255,215,0,.12)'},
+  {name:'Party',color:'#FF006E',bg:'rgba(255,0,110,.12)'},
+  {name:'Concert',color:'#00B4D8',bg:'rgba(0,180,216,.12)'},
+  {name:'Soca',color:'#FF6B35',bg:'rgba(255,107,53,.12)'},
+  {name:'Afrobeat',color:'#A855F7',bg:'rgba(168,85,247,.12)'},
+  {name:'Comedy',color:'#F472B6',bg:'rgba(244,114,182,.12)'},
+  {name:'Cultural',color:'#34D399',bg:'rgba(52,211,153,.12)'}
+];
+function gc(name){return GENRES.find(g=>g.name===name)||GENRES[0]}
+
+const now=new Date();
+function fmtDate(d){const p=v=>String(v).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`}
+function fmtTime(d){const p=v=>String(v).padStart(2,'0');return `${p(d.getHours())}:${p(d.getMinutes())}`}
+function addH(h){const d=new Date(now);d.setHours(d.getHours()+h);return d}
+function getSat(){const d=new Date(now);d.setDate(d.getDate()+(6-d.getDay()+7)%7);d.setHours(20,0,0);return d}
+function getSun(){const d=new Date(now);d.setDate(d.getDate()+(7-d.getDay())%7||7);d.setHours(18,0,0);return d}
+
+const EVENTS=[
+  {id:1,title:"Stadium Supreme",desc:"The biggest dancehall event of the year returns to National Stadium with an all-star lineup. Features live performances from top Jamaican artists, sound system clashes, and an unforgettable midnight set. VIP sections available with premium bar access.",date:fmtDate(addH(-2)),startTime:"22:00",endTime:"06:00",venue:"National Stadium",parish:"Kingston",address:"Independence Park, Kingston 5",lat:18.0179,lng:-76.8099,genre:"Dancehall",price:3500,ticketUrl:"#",cover:"https://picsum.photos/seed/stadium1/800/600.jpg",gallery:["https://picsum.photos/seed/st1/400/400.jpg","https://picsum.photos/seed/st2/400/400.jpg","https://picsum.photos/seed/st3/400/400.jpg"],promoter:{name:"Supreme Entertainment",avatar:"https://picsum.photos/seed/promo1/80/80.jpg"},isLive:true,livePhotos:[]},
+  {id:2,title:"Rebel Salute 2025",desc:"Jamaica's premier roots reggae festival returns to St. Ann. Three stages of conscious music, ital food village, craft market, and wellness zone. A family-friendly celebration of Jamaican culture.",date:fmtDate(getSat()),startTime:"16:00",endTime:"02:00",venue:"Grizzly's Plantation Cove",parish:"St. Ann",address:"Priory, St. Ann",lat:18.4167,lng:-77.0833,genre:"Reggae",price:5000,ticketUrl:"#",cover:"https://picsum.photos/seed/rebel1/800/600.jpg",gallery:["https://picsum.photos/seed/rb1/400/400.jpg","https://picsum.photos/seed/rb2/400/400.jpg"],promoter:{name:"Rebel Salute Prod.",avatar:"https://picsum.photos/seed/promo2/80/80.jpg"},isLive:false,livePhotos:[]},
+  {id:3,title:"Negril Beach Bash",desc:"Sunset to sunrise party on the famous 7-Mile Beach. Multiple DJ stages, fire dancers, beach bar, and VIP cabanas. Dress code: beach chic.",date:fmtDate(getSun()),startTime:"18:00",endTime:"06:00",venue:"Doctors Cave Beach Club",parish:"Westmoreland",address:"Norman Manley Blvd, Negril",lat:18.2733,lng:-78.3383,genre:"Party",price:2500,ticketUrl:"#",cover:"https://picsum.photos/seed/negril1/800/600.jpg",gallery:["https://picsum.photos/seed/ng1/400/400.jpg","https://picsum.photos/seed/ng2/400/400.jpg"],promoter:{name:"Island Vibes",avatar:"https://picsum.photos/seed/promo3/80/80.jpg"},isLive:false,livePhotos:[]},
+  {id:4,title:"Dancehall Wednesdays",desc:"The midweek dancehall fix. Weekly party featuring resident DJs and surprise guest artists. Half-price drinks before midnight.",date:fmtDate(addH(22)),startTime:"21:00",endTime:"03:00",venue:"QUAD Nightclub",parish:"Kingston",address:"Trafalgar Rd, New Kingston",lat:18.0128,lng:-76.7894,genre:"Dancehall",price:1500,ticketUrl:"#",cover:"https://picsum.photos/seed/quad1/800/600.jpg",gallery:["https://picsum.photos/seed/qd1/400/400.jpg"],promoter:{name:"QUAD Entertainment",avatar:"https://picsum.photos/seed/promo4/80/80.jpg"},isLive:false,livePhotos:[]},
+  {id:5,title:"Reggae Sumfest After Party",desc:"The official after-party for Reggae Sumfest. Exclusive performances from festival headliners in an intimate venue setting.",date:fmtDate(addH(120)),startTime:"23:00",endTime:"05:00",venue:"Pier 1",parish:"St. James",address:"Marine Park, Montego Bay",lat:18.4717,lng:-77.9208,genre:"Concert",price:4000,ticketUrl:"#",cover:"https://picsum.photos/seed/sumfest1/800/600.jpg",gallery:["https://picsum.photos/seed/sf1/400/400.jpg","https://picsum.photos/seed/sf2/400/400.jpg"],promoter:{name:"Sumfest Productions",avatar:"https://picsum.photos/seed/promo5/80/80.jpg"},isLive:false,livePhotos:[]},
+  {id:6,title:"Afrobeats & Vibes",desc:"Kingston's premier Afrobeats night. Afrobeats, Amapiano, and fusion sounds with top selectors and live percussion.",date:fmtDate(addH(146)),startTime:"20:00",endTime:"04:00",venue:"Coke Studio",parish:"St. Andrew",address:"Ardenne Rd, Kingston 10",lat:18.0211,lng:-76.7678,genre:"Afrobeat",price:2000,ticketUrl:"#",cover:"https://picsum.photos/seed/afro1/800/600.jpg",gallery:["https://picsum.photos/seed/af1/400/400.jpg"],promoter:{name:"Vibe Agency",avatar:"https://picsum.photos/seed/promo6/80/80.jpg"},isLive:false,livePhotos:[]},
+  {id:7,title:"Soca Monarch Finals",desc:"The ultimate Soca competition. Ten artists battle for the crown with original Soca anthems. Carnival energy all night.",date:fmtDate(addH(336)),startTime:"20:00",endTime:"03:00",venue:"Montego Bay Convention Centre",parish:"St. James",address:"Rose Hall, Montego Bay",lat:18.4900,lng:-77.9400,genre:"Soca",price:3000,ticketUrl:"#",cover:"https://picsum.photos/seed/soca1/800/600.jpg",gallery:["https://picsum.photos/seed/sc1/400/400.jpg"],promoter:["https://picsum.photos/seed/sc2/400/400.jpg"],promoter:{name:"Carnival Jamaica",avatar:"https://picsum.photos/seed/promo7/80/80.jpg"},isLive:false,livePhotos:[]},
+  {id:8,title:"Sunset Sessions",desc:"Live reggae and acoustic sets every Friday at Rick's Cafe. Watch the cliff divers and enjoy the sunset over the Caribbean.",date:fmtDate(addH(-1)),startTime:"17:00",endTime:"23:00",venue:"Rick's Cafe",parish:"Westmoreland",address:"West End Rd, Negril",lat:18.2700,lng:-78.3600,genre:"Reggae",price:1800,ticketUrl:"#",cover:"https://picsum.photos/seed/ricks1/800/600.jpg",gallery:["https://picsum.photos/seed/rk1/400/400.jpg","https://picsum.photos/seed/rk2/400/400.jpg","https://picsum.photos/seed/rk3/400/400.jpg"],promoter:{name:"Rick's Cafe",avatar:"https://picsum.photos/seed/promo8/80/80.jpg"},isLive:true,livePhotos:[]},
+  {id:9,title:"Kingston Comedy Night",desc:"Jamaica's funniest comedians under one roof. Stand-up, improv, and musical comedy. Food and drinks available.",date:fmtDate(addH(20)),startTime:"20:00",endTime:"00:00",venue:"Jamaica Pegasus",parish:"Kingston",address:"Emancipation Ave, Kingston",lat:18.0056,lng:-76.7956,genre:"Comedy",price:2200,ticketUrl:"#",cover:"https://picsum.photos/seed/comedy1/800/600.jpg",gallery:["https://picsum.photos/seed/cm1/400/400.jpg"],promoter:{name:"Laugh Jamaica",avatar:"https://picsum.photos/seed/promo9/80/80.jpg"},isLive:false,livePhotos:[]},
+  {id:10,title:"Portland Culture Fest",desc:"A celebration of Portland's rich cultural heritage. Traditional music, food, art, and crafts in the beautiful Blue Mountains foothills.",date:fmtDate(addH(504)),startTime:"10:00",endTime:"20:00",venue:"Somerset Falls",parish:"Portland",address:"Port Antonio, Portland",lat:18.1833,lng:-76.3500,genre:"Cultural",price:0,ticketUrl:"#",cover:"https://picsum.photos/seed/portland1/800/600.jpg",gallery:["https://picsum.photos/seed/pt1/400/400.jpg","https://picsum.photos/seed/pt2/400/400.jpg"],promoter:{name:"Portland Cultural Assoc.",avatar:"https://picsum.photos/seed/promo10/80/80.jpg"},isLive:false,livePhotos:[]}
+];
+
+// Seed live photos for demo
+EVENTS.filter(e=>e.isLive).forEach(e=>{
+  const count=6+Math.floor(Math.random()*12);
+  for(let i=0;i<count;i++) e.livePhotos.push(`https://picsum.photos/seed/live${e.id}_${i}/400/400.jpg`);
+});
+
+/* ============================================================
+   STATE
+   ============================================================ */
+const S={
+  screen:'splash',history:[],role:'guest',
+  selectedEvent:null,searchQuery:'',filters:{parish:'',genre:'',date:''},
+  uploadTimers:{},promoEvents:[],adminTab:'events',
+  showParticles:true
+};
+
+/* ============================================================
+   UTILS
+   ============================================================ */
+const $=s=>document.querySelector(s);
+const $$=s=>document.querySelectorAll(s);
+function toast(msg,type='info'){
+  const c=$('#toast-container'),t=document.createElement('div');
+  t.className=`toast ${type}`;t.textContent=msg;c.appendChild(t);
+  setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),300)},2800);
+}
+function fmtPrice(p){return p===0?'FREE':`$${p.toLocaleString()} JMD`}
+function fmtDateNice(d){return new Date(d+'T00:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}
+function fmtTimeNice(t){const[h,m]=t.split(':');const hr=parseInt(h);return `${hr>12?hr-12:hr||12}:${m} ${hr>=12?'PM':'AM'}`}
+function isFuture(d,t){return new Date(d+'T'+t)>=now}
+function daysUntil(d){return Math.ceil((new Date(d+'T00:00:00')-now)/(864e5))}
+function openModal(html){$('#modal-content').innerHTML=`<div class="handle"></div>${html}`;$('#modal-overlay').classList.add('show')}
+function closeModal(){$('#modal-overlay').classList.remove('show')}
+function navigate(screen,data={}){
+  if(S.screen!=='splash')S.history.push({screen:S.screen,event:S.selectedEvent});
+  S.screen=screen;if(data.event!==undefined)S.selectedEvent=data.event;
+  render();
+}
+function goBack(){
+  if(!S.history.length)return;
+  const prev=S.history.pop();S.screen=prev.screen;S.selectedEvent=prev.event;render();
+}
+function updateClock(){const n=new Date();$('#clock').textContent=`${n.getHours()||12}:${String(n.getMinutes()).padStart(2,'0')}`}
+
+/* ============================================================
+   COMPONENTS
+   ============================================================ */
+function genreBadge(g,cls='badge-genre'){
+  const c=gc(g);return `<span class="badge ${cls}" style="background:${c.bg};color:${c.color};border:1px solid ${c.color}33">${g}</span>`;
+}
+function eventCardV(e){
+  return `<div class="event-card-v" data-action="event" data-id="${e.id}">
+    <img class="img" src="${e.cover}" alt="${e.title}" loading="lazy">
+    <div class="overlay"></div>
+    ${genreBadge(e.genre)}
+    ${e.isLive?'<span class="badge badge-live">LIVE</span>':''}
+    <span class="badge badge-price">${fmtPrice(e.price)}</span>
+    <div class="body">
+      <div class="title">${e.title}</div>
+      <div class="meta">
+        <span><i class="fas fa-calendar-day"></i> ${fmtDateNice(e.date)} &middot; ${fmtTimeNice(e.startTime)}</span>
+        <span><i class="fas fa-map-marker-alt"></i> ${e.venue}, ${e.parish}</span>
+      </div>
+    </div>
+  </div>`;
+}
+function eventCardH(e,idx){
+  return `<div class="event-card-h" data-action="event" data-id="${e.id}" style="animation:fadeInUp .4s ease ${idx*.06}s forwards;opacity:0">
+    <img class="img" src="${e.cover}" alt="${e.title}" loading="lazy">
+    <div class="info">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+        ${genreBadge(e.genre)}
+        ${e.isLive?'<span class="badge" style="position:static;background:var(--magenta);color:#fff;font-size:9px;padding:2px 7px">LIVE</span>':''}
+      </div>
+      <div class="title">${e.title}</div>
+      <div class="meta">
+        <span><i class="fas fa-calendar-day"></i> ${fmtDateNice(e.date)} &middot; ${fmtTimeNice(e.startTime)}</span>
+        <span><i class="fas fa-map-marker-alt"></i> ${e.venue}, ${e.parish}</span>
+        <span style="color:${gc(e.genre).color};font-weight:600">${fmtPrice(e.price)}</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ============================================================
+   SCREENS
+   ============================================================ */
+function splashScreen(){
+  return `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:calc(100dvh - 50px - 84px);text-align:center">
+    <div class="splash-logo anim-up"><span>f</span><span class="e">e</span><span class="e" style="animation-delay:.15s">e</span><span class="e" style="animation-delay:.3s">e</span><span>d</span><span>z</span></div>
+    <div class="splash-sub anim-up delay-2">Discover Jamaica's Hottest Events</div>
+    <div class="splash-dots anim-up delay-4"><span></span><span></span><span></span></div>
+  </div>`;
+}
+
+function homeScreen(){
+  const live=EVENTS.filter(e=>e.isLive);
+  const weekend=EVENTS.filter(e=>!e.isLive&&daysUntil(e.date)<=7&&daysUntil(e.date)>=0).sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const upcoming=EVENTS.filter(e=>!e.isLive&&daysUntil(e.date)>0).sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const trending=[...EVENTS].sort(()=>Math.random()-.5).slice(0,5);
+
+  return `<div class="screen-pad">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px" class="anim-up">
+      <div>
+        <div style="font-size:13px;color:var(--fg3);font-weight:500">What's good,</div>
+        <div style="font-family:var(--font2);font-size:26px;font-weight:800">Kingston</div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <div style="width:40px;height:40px;border-radius:12px;background:var(--card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer" data-action="promo-login"><i class="fas fa-briefcase" style="font-size:15px;color:var(--fg3)"></i></div>
+        <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#00cc6a);display:flex;align-items:center;justify-content:center;font-weight:700;color:#000;font-size:14px;font-family:var(--font2)">G</div>
+      </div>
+    </div>
+
+    ${live.length?`
+    <div class="section-head anim-up delay-1" style="margin-top:20px">
+      <h2><i class="fas fa-broadcast-tower" style="color:var(--magenta);margin-right:8px;font-size:16px"></i>Live Now</h2>
+      <a data-action="see-all" data-filter="live">See All</a>
+    </div>
+    <div class="h-scroll anim-up delay-2">${live.map(e=>eventCardV(e)).join('')}</div>`:''}
+
+    <div class="section-head anim-up delay-2">
+      <h2>This Weekend</h2>
+      <a data-action="see-all" data-filter="weekend">See All</a>
+    </div>
+    <div class="h-scroll anim-up delay-3">${weekend.length?weekend.map(e=>eventCardV(e)).join(''):'<div style="color:var(--fg4);font-size:13px;padding:20px 0">No events this weekend</div>'}</div>
+
+    <div class="section-head anim-up delay-3">
+      <h2><i class="fas fa-fire" style="color:var(--orange);margin-right:8px;font-size:16px"></i>Trending</h2>
+    </div>
+    <div class="anim-up delay-4">${trending.map((e,i)=>eventCardH(e,i)).join('')}</div>
+
+    <div class="section-head anim-up delay-4">
+      <h2>Upcoming</h2>
+      <a data-action="see-all" data-filter="upcoming">See All</a>
+    </div>
+    <div class="anim-up delay-5">${upcoming.map((e,i)=>eventCardH(e,i)).join('')}</div>
+  </div>`;
+}
+
+function searchScreen(){
+  const f=S.filters;
+  const filtered=EVENTS.filter(e=>{
+    if(f.parish&&e.parish!==f.parish)return false;
+    if(f.genre&&e.genre!==f.genre)return false;
+    if(S.searchQuery){const q=S.searchQuery.toLowerCase();if(!e.title.toLowerCase().includes(q)&&!e.venue.toLowerCase().includes(q)&&!e.parish.toLowerCase().includes(q))return false;}
+    return true;
+  }).sort((a,b)=>new Date(a.date)-new Date(b.date));
+
+  return `<div class="screen-pad">
+    <h1 style="font-family:var(--font2);font-size:28px;font-weight:800;margin-bottom:16px" class="anim-up">Search</h1>
+    <div class="search-bar anim-up delay-1" style="margin-bottom:14px">
+      <i class="fas fa-search"></i>
+      <input type="text" placeholder="Events, venues, parishes..." value="${S.searchQuery}" id="search-input" aria-label="Search events">
+      ${S.searchQuery?`<i class="fas fa-times" style="cursor:pointer" data-action="clear-search"></i>`:''}
+    </div>
+    <div class="tab-row anim-up delay-2" style="margin-bottom:10px;gap:6px;flex-wrap:wrap">
+      ${PARISHES.slice(0,8).map(p=>`<span class="chip ${f.parish===p?'active':''}" data-action="filter-parish" data-val="${p}">${p}</span>`).join('')}
+    </div>
+    <div class="tab-row anim-up delay-3" style="margin-bottom:20px;gap:6px;flex-wrap:wrap">
+      ${GENRES.map(g=>`<span class="chip ${f.genre===g.name?'active':''}" data-action="filter-genre" data-val="${g.name}" style="${f.genre===g.name?`border-color:${g.color};color:${g.color};background:${g.bg}`:''}">${g.name}</span>`).join('')}
+    </div>
+    ${f.parish||f.genre?`<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+      <span style="font-size:13px;color:var(--fg3)">Filters:</span>
+      ${f.parish?`<span class="chip active" data-action="filter-parish" data-val="">${f.parish} <i class="fas fa-times" style="font-size:10px;margin-left:2px"></i></span>`:''}
+      ${f.genre?`<span class="chip active" data-action="filter-genre" data-val="" style="border-color:${gc(f.genre).color};color:${gc(f.genre).color}">${f.genre} <i class="fas fa-times" style="font-size:10px;margin-left:2px"></i></span>`:''}
+    </div>`:''}
+    <div style="font-size:13px;color:var(--fg3);margin-bottom:12px">${filtered.length} event${filtered.length!==1?'s':''} found</div>
+    ${filtered.length?filtered.map((e,i)=>eventCardH(e,i)).join(''):'<div style="text-align:center;padding:60px 20px;color:var(--fg4)"><i class="fas fa-search" style="font-size:40px;margin-bottom:16px;display:block;opacity:.3"></i>No events match your search</div>'}
+  </div>`;
+}
+
+function mapScreen(){
+  // Stylized map with pins
+  const pins=EVENTS.filter(e=>!e.isLive||true).map(e=>({
+    ...e,x:((e.lng+78.5)*120).toFixed(1),y:((18.6-e.lat)*180).toFixed(1)
+  }));
+  return `<div class="screen-pad">
+    <h1 style="font-family:var(--font2);font-size:28px;font-weight:800;margin-bottom:16px" class="anim-up">Map</h1>
+    <div class="map-container anim-up delay-1" id="map-view">
+      <svg viewBox="0 0 400 450" style="position:absolute;inset:0;width:100%;height:100%;opacity:.08">
+        <defs><pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="#00ff88" stroke-width="0.3"/></pattern></defs>
+        <rect width="400" height="450" fill="url(#grid)"/>
+      </svg>
+      <svg viewBox="0 0 400 450" style="position:absolute;inset:0;width:100%;height:100%;opacity:.15">
+        <path d="M180,60 C200,50 240,48 260,58 C280,68 295,85 305,110 C312,130 308,155 300,175 C292,195 275,210 255,222 C235,234 215,242 195,248 C175,254 158,248 142,235 C126,222 115,205 108,182 C101,159 105,135 112,112 C119,89 135,72 155,63 Z" fill="none" stroke="#00ff88" stroke-width="1.5"/>
+      </svg>
+      ${pins.map(p=>`<div class="map-pin" style="left:${p.x}px;top:${p.y}px" data-action="event" data-id="${p.id}">
+        <i class="fas fa-map-pin" style="color:${gc(p.genre).color}"></i>
+        <div class="pin-label">${p.title}</div>
+      </div>`).join('')}
+    </div>
+    <div style="margin-top:14px;font-size:12px;color:var(--fg4);text-align:center">Tap a pin to view event details</div>
+  </div>`;
+}
+
+function eventDetailScreen(){
+  const e=S.selectedEvent;if(!e)return'<div>Event not found</div>';
+  const g=gc(e.genre);
+  return `<div>
+    <div class="detail-hero">
+      <img src="${e.cover}" alt="${e.title}">
+      <div class="gradient"></div>
+      <div class="back-btn" data-action="back" aria-label="Go back"><i class="fas fa-arrow-left"></i></div>
+      ${e.isLive?'<span class="badge badge-live" style="top:14px;right:14px;position:absolute;z-index:5">LIVE</span>':''}
+    </div>
+    <div class="screen-pad" style="padding-top:0;margin-top:-40px;position:relative;z-index:5">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        ${genreBadge(e.genre)}
+        <span style="font-size:12px;color:var(--fg3)">${fmtPrice(e.price)}</span>
+      </div>
+      <h1 style="font-family:var(--font2);font-size:28px;font-weight:800;line-height:1.2;margin-bottom:16px">${e.title}</h1>
+
+      <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:24px">
+        <div style="display:flex;align-items:center;gap:14px">
+          <div style="width:42px;height:42px;border-radius:12px;background:${g.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="fas fa-calendar-day" style="color:${g.color}"></i></div>
+          <div><div style="font-weight:600;font-size:14px">${fmtDateNice(e.date)}</div><div style="font-size:12px;color:var(--fg3)">${fmtTimeNice(e.startTime)} — ${fmtTimeNice(e.endTime)}</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px">
+          <div style="width:42px;height:42px;border-radius:12px;background:${g.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="fas fa-map-marker-alt" style="color:${g.color}"></i></div>
+          <div><div style="font-weight:600;font-size:14px">${e.venue}</div><div style="font-size:12px;color:var(--fg3)">${e.address}, ${e.parish}</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px">
+          <img src="${e.promoter.avatar}" style="width:42px;height:42px;border-radius:12px;object-fit:cover;flex-shrink:0" alt="${e.promoter.name}">
+          <div><div style="font-weight:600;font-size:14px">${e.promoter.name}</div><div style="font-size:12px;color:var(--fg3)">Promoter</div></div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:24px">
+        <h3 style="font-family:var(--font2);font-size:16px;font-weight:700;margin-bottom:8px">About</h3>
+        <p style="font-size:14px;color:var(--fg2);line-height:1.7">${e.desc}</p>
+      </div>
+
+      ${e.gallery.length?`
+      <div style="margin-bottom:24px">
+        <h3 style="font-family:var(--font2);font-size:16px;font-weight:700;margin-bottom:10px">Gallery</h3>
+        <div class="h-scroll" style="gap:8px">${e.gallery.map(img=>`<img src="${img}" style="width:140px;height:100px;object-fit:cover;border-radius:var(--rs);flex-shrink:0;cursor:pointer" alt="Event gallery" data-action="lightbox" data-src="${img}">`).join('')}</div>
+      </div>`:''}
+
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">
+        <button class="btn btn-primary" data-action="buy-tickets"><i class="fas fa-ticket-alt"></i> Buy Tickets</button>
+        <button class="btn btn-secondary" data-action="directions"><i class="fas fa-directions"></i> Get Directions</button>
+        <button class="btn btn-secondary" style="position:relative" data-action="coming-soon" data-feature="Travel with Taxi">
+          <i class="fas fa-taxi"></i> Travel with Taxi
+          <span style="position:absolute;right:14px;font-size:10px;color:var(--fg4);font-weight:400">Coming Soon</span>
+        </button>
+      </div>
+
+      ${e.isLive?`
+      <div style="margin-bottom:20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <h3 style="font-family:var(--font2);font-size:16px;font-weight:700"><i class="fas fa-camera" style="color:var(--magenta);margin-right:8px"></i>Live Photos</h3>
+          <span style="font-size:12px;color:var(--fg3)">${e.livePhotos.length}/200</span>
+        </div>
+        <div class="photo-grid">${e.livePhotos.slice(0,18).map(p=>`<img src="${p}" alt="Live photo" data-action="lightbox" data-src="${p}" loading="lazy">`).join('')}</div>
+        ${e.livePhotos.length>18?`<div style="text-align:center;margin-top:10px"><button class="btn btn-outline btn-sm" data-action="live-feed" data-id="${e.id}">View All ${e.livePhotos.length} Photos</button></div>`:''}
+        <button class="btn btn-secondary" style="margin-top:12px" data-action="upload-photo" data-id="${e.id}"><i class="fas fa-cloud-upload-alt"></i> Upload a Photo</button>
+      </div>`:''}
+    </div>
+  </div>`;
+}
+
+function liveFeedScreen(){
+  const e=EVENTS.find(ev=>ev.id===(S.selectedEvent?.id||S._liveFeedId));
+  if(!e)return'<div>Event not found</div>';
+  return `<div>
+    <div style="display:flex;align-items:center;gap:14px;padding:10px 20px;position:sticky;top:0;background:var(--bg);z-index:10;border-bottom:1px solid var(--border)">
+      <div class="back-btn" style="position:static;width:36px;height:36px;font-size:14px" data-action="back"><i class="fas fa-arrow-left"></i></div>
+      <div style="flex:1"><div style="font-family:var(--font2);font-weight:700;font-size:16px">${e.title}</div><div style="font-size:11px;color:var(--fg3)">${e.livePhotos.length} photos</div></div>
+      <span class="badge" style="position:static;background:var(--magenta);color:#fff;animation:livePulse 1.5s ease infinite">LIVE</span>
+    </div>
+    <div class="screen-pad">
+      <div class="photo-grid">${e.livePhotos.map(p=>`<img src="${p}" alt="Live photo" data-action="lightbox" data-src="${p}" loading="lazy">`).join('')}</div>
+      ${!e.livePhotos.length?'<div style="text-align:center;padding:60px 20px;color:var(--fg4)"><i class="fas fa-camera-retro" style="font-size:40px;margin-bottom:16px;display:block;opacity:.3"></i>No photos yet. Be the first to upload!</div>':''}
+    </div>
+    <button class="fab" data-action="upload-photo" data-id="${e.id}" aria-label="Upload photo"><i class="fas fa-plus"></i></button>
+  </div>`;
+}
+
+function promoLoginScreen(){
+  return `<div class="screen-pad" style="display:flex;flex-direction:column;justify-content:center;min-height:calc(100dvh - 134px)">
+    <div class="anim-up" style="text-align:center;margin-bottom:40px">
+      <div style="font-family:var(--font2);font-size:32px;font-weight:800;margin-bottom:6px">Promoter Login</div>
+      <div style="color:var(--fg3);font-size:14px">Manage your events on feeedz</div>
+    </div>
+    <div class="input-group anim-up delay-1"><label>Email</label><input type="email" id="pl-email" placeholder="promoter@example.com" autocomplete="email"></div>
+    <div class="input-group anim-up delay-2"><label>Password</label><input type="password" id="pl-pass" placeholder="Enter password" autocomplete="current-password"></div>
+    <button class="btn btn-primary anim-up delay-3" data-action="promo-submit" style="margin-bottom:14px">Sign In</button>
+    <div class="anim-up delay-4" style="text-align:center">
+      <span style="font-size:13px;color:var(--fg3)">Don't have an account? </span>
+      <span style="font-size:13px;color:var(--accent);cursor:pointer;font-weight:600" data-action="promo-signup">Sign Up</span>
+    </div>
+    <div style="text-align:center;margin-top:30px" class="anim-up delay-5">
+      <span style="font-size:11px;color:var(--fg4);cursor:pointer" data-action="guest-home">Continue as Guest</span>
+    </div>
+  </div>`;
+}
+
+function promoSignupScreen(){
+  return `<div class="screen-pad" style="display:flex;flex-direction:column;justify-content:center;min-height:calc(100dvh - 134px)">
+    <div class="anim-up" style="text-align:center;margin-bottom:32px">
+      <div style="font-family:var(--font2);font-size:28px;font-weight:800;margin-bottom:6px">Create Account</div>
+      <div style="color:var(--fg3);font-size:14px">Start promoting events on feeedz</div>
+    </div>
+    <div class="input-group anim-up delay-1"><label>Full Name</label><input type="text" id="ps-name" placeholder="Your name"></div>
+    <div class="input-group anim-up delay-2"><label>Email</label><input type="email" id="ps-email" placeholder="promoter@example.com"></div>
+    <div class="input-group anim-up delay-3"><label>Password</label><input type="password" id="ps-pass" placeholder="Min 8 characters"></div>
+    <div class="input-group anim-up delay-4"><label>OTP Verification</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="text" id="ps-otp" placeholder="Enter 6-digit code" maxlength="6" style="flex:1;letter-spacing:4px;text-align:center;font-family:var(--font2);font-weight:700">
+        <button class="btn btn-outline btn-sm" data-action="send-otp" style="width:auto;white-space:nowrap">Send OTP</button>
+      </div>
+    </div>
+    <button class="btn btn-primary anim-up delay-5" data-action="promo-signup-submit" style="margin-bottom:14px">Create Account</button>
+    <div style="text-align:center" class="anim-up delay-6">
+      <span style="font-size:13px;color:var(--fg3)">Already have an account? </span>
+      <span style="font-size:13px;color:var(--accent);cursor:pointer;font-weight:600" data-action="promo-login">Sign In</span>
+    </div>
+  </div>`;
+}
+
+function createEventScreen(){
+  return `<div class="screen-pad">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:24px" class="anim-up">
+      <div class="back-btn" style="position:static;width:36px;height:36px;font-size:14px;background:var(--card);border-color:var(--border)" data-action="back"><i class="fas fa-arrow-left"></i></div>
+      <h1 style="font-family:var(--font2);font-size:24px;font-weight:800">Create Event</h1>
+    </div>
+    <div class="input-group anim-up delay-1"><label>Event Title</label><input type="text" id="ce-title" placeholder="Give your event a name"></div>
+    <div class="input-group anim-up delay-2"><label>Description</label><textarea id="ce-desc" placeholder="Tell people what to expect..."></textarea></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" class="anim-up delay-2">
+      <div class="input-group"><label>Date</label><input type="date" id="ce-date"></div>
+      <div class="input-group"><label>Genre</label><select id="ce-genre">${GENRES.map(g=>`<option value="${g.name}">${g.name}</option>`).join('')}</select></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" class="anim-up delay-3">
+      <div class="input-group"><label>Start Time</label><input type="time" id="ce-start" value="20:00"></div>
+      <div class="input-group"><label>End Time</label><input type="time" id="ce-end" value="02:00"></div>
+    </div>
+    <div class="input-group anim-up delay-3"><label>Venue Name</label><input type="text" id="ce-venue" placeholder="e.g. QUAD Nightclub"></div>
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px" class="anim-up delay-4">
+      <div class="input-group"><label>Parish</label><select id="ce-parish">${PARISHES.map(p=>`<option value="${p}">${p}</option>`).join('')}</select></div>
+      <div class="input-group"><label>Price (JMD)</label><input type="number" id="ce-price" placeholder="0" value="0" min="0"></div>
+    </div>
+    <div class="input-group anim-up delay-4"><label>Address</label><input type="text" id="ce-addr" placeholder="Full address for directions"></div>
+    <div class="input-group anim-up delay-5"><label>Ticket URL</label><input type="url" id="ce-ticket" placeholder="https://..."></div>
+    <div class="input-group anim-up delay-5"><label>Cover Image URL</label><input type="url" id="ce-cover" placeholder="https://..."></div>
+    <button class="btn btn-gold anim-up delay-6" data-action="proceed-payment" style="margin-top:8px"><i class="fas fa-lock"></i> Pay & Publish — $500 JMD</button>
+  </div>`;
+}
+
+function paymentScreen(){
+  return `<div class="screen-pad" style="display:flex;flex-direction:column;justify-content:center;min-height:calc(100dvh - 134px)">
+    <div class="anim-up" style="text-align:center;margin-bottom:36px">
+      <div style="width:64px;height:64px;border-radius:50%;background:var(--gold2);display:flex;align-items:center;justify-content:center;margin:0 auto 16px"><i class="fas fa-credit-card" style="font-size:24px;color:var(--gold)"></i></div>
+      <div style="font-family:var(--font2);font-size:24px;font-weight:800;margin-bottom:4px">Secure Payment</div>
+      <div style="color:var(--fg3);font-size:14px">Event publishing fee</div>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:24px" class="anim-up delay-1">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:var(--fg3);font-size:14px">Event Publishing Fee</span><span style="font-weight:600">$500.00 JMD</span></div>
+      <div style="display:flex;justify-content:space-between;padding-top:10px;border-top:1px solid var(--border)"><span style="font-weight:700;font-size:16px">Total</span><span style="font-weight:800;font-size:18px;color:var(--gold)">$500.00 JMD</span></div>
+    </div>
+    <div class="input-group anim-up delay-2"><label>Card Number</label><input type="text" id="pay-card" placeholder="4242 4242 4242 4242" maxlength="19"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" class="anim-up delay-3">
+      <div class="input-group"><label>Expiry</label><input type="text" id="pay-exp" placeholder="MM/YY" maxlength="5"></div>
+      <div class="input-group"><label>CVC</label><input type="text" id="pay-cvc" placeholder="123" maxlength="3"></div>
+    </div>
+    <button class="btn btn-gold anim-up delay-4" data-action="process-payment"><i class="fas fa-lock"></i> Pay $500 JMD</button>
+    <div style="text-align:center;margin-top:16px;font-size:11px;color:var(--fg4)" class="anim-up delay-5"><i class="fas fa-shield-alt" style="margin-right:4px"></i>Secured by Stripe. Your card info is encrypted.</div>
+  </div>`;
+}
+
+function manageEventsScreen(){
+  const events=S.promoEvents.length?S.promoEvents:EVENTS.slice(0,3); // Demo: show some events
+  return `<div class="screen-pad">
+    <h1 style="font-family:var(--font2);font-size:28px;font-weight:800;margin-bottom:6px" class="anim-up">My Events</h1>
+    <p style="color:var(--fg3);font-size:13px;margin-bottom:20px" class="anim-up delay-1">${events.length} event${events.length!==1?'s':''} &middot; Auto-deleted 48h after end time</p>
+    ${events.map((e,i)=>{
+      const d=daysUntil(e.date);
+      const status=d<0?'Ended':e.isLive?'Live':d===0?'Today':'Upcoming';
+      const statusColor=status==='Live'?'var(--magenta)':status==='Ended'?'var(--fg4)':'var(--accent)';
+      return `<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--rs);padding:14px;margin-bottom:10px;display:flex;gap:12px;align-items:center" class="anim-up" style="animation-delay:${i*.05}s">
+        <img src="${e.cover}" style="width:60px;height:60px;border-radius:var(--rx);object-fit:cover;flex-shrink:0" alt="${e.title}">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.title}</div>
+          <div style="font-size:12px;color:var(--fg3);margin-top:2px">${fmtDateNice(e.date)} &middot; ${e.venue}</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+            <span style="font-size:10px;font-weight:700;color:${statusColor};text-transform:uppercase;letter-spacing:.5px">${status}</span>
+            <span style="font-size:10px;color:var(--fg4)">${fmtPrice(e.price)}</span>
+          </div>
+        </div>
+        <i class="fas fa-ellipsis-v" style="color:var(--fg4);cursor:pointer;padding:8px" data-action="event-options" data-id="${e.id}"></i>
+      </div>`;
+    }).join('')}
+    <button class="btn btn-primary" style="margin-top:20px" data-action="create-event"><i class="fas fa-plus"></i> Create New Event</button>
+  </div>`;
+}
+
+function profileScreen(){
+  return `<div class="screen-pad" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100dvh - 134px);text-align:center">
+    <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#00cc6a);display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:800;color:#000;font-family:var(--font2);margin-bottom:16px" class="anim-up">G</div>
+    <div style="font-family:var(--font2);font-size:22px;font-weight:800;margin-bottom:4px" class="anim-up delay-1">Guest User</div>
+    <div style="color:var(--fg3);font-size:14px;margin-bottom:40px" class="anim-up delay-2">Browsing events in Jamaica</div>
+    <button class="btn btn-primary anim-up delay-3" style="max-width:280px;margin-bottom:12px" data-action="promo-login"><i class="fas fa-briefcase"></i> Are you a Promoter? Sign In</button>
+    <div style="margin-top:40px" class="anim-up delay-4">
+      <div style="font-size:11px;color:var(--fg4);margin-bottom:12px">feeedz v1.0.0</div>
+      <div style="display:flex;gap:20px;justify-content:center;font-size:12px;color:var(--fg4)">
+        <span style="cursor:pointer" data-action="coming-soon" data-feature="Privacy Policy">Privacy</span>
+        <span style="cursor:pointer" data-action="coming-soon" data-feature="Terms of Service">Terms</span>
+        <span style="cursor:pointer" data-action="coming-soon" data-feature="Support">Support</span>
+      </div>
+    </div>
+    <div style="position:absolute;bottom:100px;font-size:10px;color:var(--fg4);cursor:pointer" data-action="admin-login" class="anim-up delay-5">Admin</div>
+  </div>`;
+}
+
+function adminLoginScreen(){
+  return `<div class="screen-pad" style="display:flex;flex-direction:column;justify-content:center;min-height:calc(100dvh - 134px)">
+    <div class="anim-up" style="text-align:center;margin-bottom:36px">
+      <div style="width:56px;height:56px;border-radius:16px;background:var(--card2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;margin:0 auto 16px"><i class="fas fa-shield-alt" style="font-size:22px;color:var(--accent)"></i></div>
+      <div style="font-family:var(--font2);font-size:24px;font-weight:800">Admin Access</div>
+      <div style="color:var(--fg3);font-size:13px;margin-top:4px">2FA verification required</div>
+    </div>
+    <div class="input-group anim-up delay-1"><label>Email</label><input type="email" id="al-email" placeholder="admin@feeedz.com" value="admin@feeedz.com"></div>
+    <div class="input-group anim-up delay-2"><label>Password</label><input type="password" id="al-pass" placeholder="Password" value="admin123"></div>
+    <div id="otp-section" style="display:none">
+      <div class="input-group anim-up delay-3"><label>2FA Code <span style="color:var(--fg4);font-weight:400;text-transform:none;letter-spacing:0">(Demo: 482916)</span></label>
+        <div class="otp-inputs">
+          <input type="text" maxlength="1" class="otp-digit" data-idx="0">
+          <input type="text" maxlength="1" class="otp-digit" data-idx="1">
+          <input type="text" maxlength="1" class="otp-digit" data-idx="2">
+          <input type="text" maxlength="1" class="otp-digit" data-idx="3">
+          <input type="text" maxlength="1" class="otp-digit" data-idx="4">
+          <input type="text" maxlength="1" class="otp-digit" data-idx="5">
+        </div>
+      </div>
+    </div>
+    <button class="btn btn-primary anim-up delay-3" data-action="admin-submit" id="admin-submit-btn">Send 2FA Code</button>
+    <div style="text-align:center;margin-top:20px"><span style="font-size:13px;color:var(--fg4);cursor:pointer" data-action="guest-home">Back to App</span></div>
+  </div>`;
+}
+
+function adminDashboard(){
+  const tabs=['events','users','payments'];
+  return `<div class="screen-pad">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px" class="anim-up">
+      <h1 style="font-family:var(--font2);font-size:24px;font-weight:800">Dashboard</h1>
+      <span style="font-size:12px;color:var(--accent);cursor:pointer;font-weight:600" data-action="admin-logout">Logout</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:24px" class="anim-up delay-1">
+      <div class="stat-card"><div class="stat-icon" style="background:var(--accent2);color:var(--accent)"><i class="fas fa-calendar-check"></i></div><div class="stat-val">47</div><div class="stat-label">Total Events</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:var(--gold2);color:var(--gold)"><i class="fas fa-dollar-sign"></i></div><div class="stat-val">$2.4M</div><div class="stat-label">Revenue (JMD)</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:var(--magenta2);color:var(--magenta)"><i class="fas fa-users"></i></div><div class="stat-val">1,234</div><div class="stat-label">Active Users (24h)</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:rgba(0,180,216,.12);color:var(--cyan)"><i class="fas fa-camera"></i></div><div class="stat-val">3,847</div><div class="stat-label">Photo Uploads</div></div>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:20px" class="anim-up delay-2">
+      <div style="font-weight:700;font-size:14px;margin-bottom:14px">Events by Parish</div>
+      ${[['Kingston',18],['St. James',9],['Westmoreland',7],['St. Ann',5],['St. Andrew',4],['Other',4]].map(([name,val])=>`<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><span style="font-size:12px;color:var(--fg3);width:90px;flex-shrink:0">${name}</span><div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden"><div style="height:100%;width:${val/18*100}%;background:var(--accent);border-radius:4px;transition:width 1s ease"></div></div><span style="font-size:12px;font-weight:600;width:24px;text-align:right">${val}</span></div>`).join('')}
+    </div>
+    <div class="tab-row anim-up delay-3" style="margin-bottom:16px">
+      ${tabs.map(t=>`<span class="tab ${S.adminTab===t?'active':''}" data-action="admin-tab" data-val="${t}">${t.charAt(0).toUpperCase()+t.slice(1)}</span>`).join('')}
+    </div>
+    ${S.adminTab==='events'?adminEventsTab():S.adminTab==='users'?adminUsersTab():adminPaymentsTab()}
+  </div>`;
+}
+function adminEventsTab(){
+  return `<div style="overflow-x:auto"><table class="admin-table">
+    <thead><tr><th>Event</th><th>Parish</th><th>Date</th><th>Status</th><th>Action</th></tr></thead>
+    <tbody>${EVENTS.slice(0,7).map(e=>{
+      const st=e.isLive?'Live':'Active';
+      const sc=e.isLive?'var(--magenta)':'var(--accent)';
+      return `<tr><td style="font-weight:600;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.title}</td><td>${e.parish}</td><td>${fmtDateNice(e.date)}</td><td style="color:${sc};font-weight:600">${st}</td><td><span style="color:var(--magenta);cursor:pointer;font-weight:600" data-action="admin-delete" data-id="${e.id}">Delete</span></td></tr>`;
+    }).join('')}</tbody>
+  </table></div>`;
+}
+function adminUsersTab(){
+  const users=[{name:'Supreme Entertainment',email:'supreme@email.com',events:5,status:'Active'},{name:'Island Vibes',email:'island@email.com',events:3,status:'Active'},{name:'Laugh Jamaica',email:'laugh@email.com',events:2,status:'Banned'},{name:'Vibe Agency',email:'vibe@email.com',events:4,status:'Active'},{name:'Carnival Jamaica',email:'carnival@email.com',events:6,status:'Active'}];
+  return `<div style="overflow-x:auto"><table class="admin-table">
+    <thead><tr><th>Promoter</th><th>Email</th><th>Events</th><th>Status</th><th>Action</th></tr></thead>
+    <tbody>${users.map((u,i)=>`<tr><td style="font-weight:600">${u.name}</td><td style="color:var(--fg3)">${u.email}</td><td>${u.events}</td><td style="color:${u.status==='Active'?'var(--accent)':'var(--magenta)'};font-weight:600">${u.status}</td><td><span style="color:${u.status==='Active'?'var(--magenta)':'var(--accent)'};cursor:pointer;font-weight:600" data-action="admin-toggle-user" data-idx="${i}">${u.status==='Active'?'Ban':'Unban'}</span></td></tr>`).join('')}</tbody>
+  </table></div>`;
+}
+function adminPaymentsTab(){
+  const txns=[{id:'txn_001',promoter:'Supreme Ent.',amount:500,date:'Jul 15, 2025',status:'Paid'},{id:'txn_002',promoter:'Island Vibes',amount:500,date:'Jul 14, 2025',status:'Paid'},{id:'txn_003',promoter:'Laugh Jamaica',amount:500,date:'Jul 13, 2025',status:'Refunded'},{id:'txn_004',promoter:'Vibe Agency',amount:500,date:'Jul 12, 2025',status:'Paid'},{id:'txn_005',promoter:'Carnival JA',amount:500,date:'Jul 11, 2025',status:'Paid'}];
+  return `<div style="overflow-x:auto"><table class="admin-table">
+    <thead><tr><th>Transaction</th><th>Promoter</th><th>Amount</th><th>Date</th><th>Status</th><th>Action</th></tr></thead>
+    <tbody>${txns.map(t=>`<tr><td style="font-family:monospace;font-size:11px;color:var(--fg3)">${t.id}</td><td>${t.promoter}</td><td style="font-weight:600">$${t.amount}</td><td style="color:var(--fg3)">${t.date}</td><td style="color:${t.status==='Paid'?'var(--accent)':'var(--magenta)'};font-weight:600">${t.status}</td><td>${t.status==='Paid'?`<span style="color:var(--magenta);cursor:pointer;font-weight:600" data-action="admin-refund" data-txn="${t.id}">Refund</span>`:'—'}</td></tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+function getScreenHTML(){
+  switch(S.screen){
+    case 'splash':return splashScreen();
+    case 'home':return homeScreen();
+    case 'search':return searchScreen();
+    case 'map':return mapScreen();
+    case 'event':return eventDetailScreen();
+    case 'live-feed':return liveFeedScreen();
+    case 'promo-login':return promoLoginScreen();
+    case 'promo-signup':return promoSignupScreen();
+    case 'create-event':return createEventScreen();
+    case 'payment':return paymentScreen();
+    case 'manage-events':return manageEventsScreen();
+    case 'profile':return profileScreen();
+    case 'admin-login':return adminLoginScreen();
+    case 'admin':return adminDashboard();
+    default:return homeScreen();
+  }
+}
+
+function getNavHTML(){
+  if(S.role==='admin')return `<div class="nav-item active" data-nav="admin"><i class="fas fa-chart-bar"></i><span>Dashboard</span></div><div class="nav-item" data-nav="admin-login"><i class="fas fa-sign-out-alt"></i><span>Logout</span></div>`;
+  if(S.role==='promoter')return `
+    <div class="nav-item ${S.screen==='manage-events'?'active':''}" data-nav="manage-events"><i class="fas fa-list"></i><span>Events</span></div>
+    <div class="nav-item ${S.screen==='create-event'?'active':''}" data-nav="create-event"><i class="fas fa-plus-circle"></i><span>Create</span></div>
+    <div class="nav-item" data-nav="coming-soon" data-feature="Payments"><i class="fas fa-wallet"></i><span>Payments</span></div>
+    <div class="nav-item ${S.screen==='profile'?'active':''}" data-nav="profile"><i class="fas fa-user"></i><span>Profile</span></div>`;
+  return `
+    <div class="nav-item ${S.screen==='home'?'active':''}" data-nav="home"><i class="fas fa-fire"></i><span>Feed</span></div>
+    <div class="nav-item ${S.screen==='search'?'active':''}" data-nav="search"><i class="fas fa-search"></i><span>Search</span></div>
+    <div class="nav-item ${S.screen==='map'?'active':''}" data-nav="map"><i class="fas fa-map-marked-alt"></i><span>Map</span></div>
+    <div class="nav-item ${S.screen==='profile'?'active':''}" data-nav="profile"><i class="fas fa-user"></i><span>Profile</span></div>`;
+}
+
+function render(){
+  const scr=$('#screen');
+  scr.style.opacity='0';scr.style.transform='translateX(30px)';
+  setTimeout(()=>{
+    scr.innerHTML=getScreenHTML();
+    scr.style.transition='opacity .3s ease, transform .3s ease';
+    scr.style.opacity='1';scr.style.transform='translateX(0)';
+    scr.scrollTop=0;
+    $('#bottom-nav').innerHTML=getNavHTML();
+    S.showParticles=(S.screen==='splash'||S.screen==='home');
+    attachListeners();
+  },150);
+}
+
+/* ============================================================
+   EVENT LISTENERS
+   ============================================================ */
+function attachListeners(){
+  // Search input
+  const si=$('#search-input');
+  if(si){let t;si.addEventListener('input',e=>{clearTimeout(t);t=setTimeout(()=>{S.searchQuery=e.target.value.trim();render()},300)})}
+
+  // OTP auto-advance
+  $$('.otp-digit').forEach(inp=>{
+    inp.addEventListener('input',e=>{
+      const v=e.target.value;if(!v)return;
+      const next=$(`.otp-digit[data-idx="${parseInt(e.target.dataset.idx)+1}"]`);
+      if(next)next.focus();
+    });
+    inp.addEventListener('keydown',e=>{
+      if(e.key==='Backspace'&&!e.target.value){
+        const prev=$(`.otp-digit[data-idx="${parseInt(e.target.dataset.idx)-1}"]`);
+        if(prev){prev.focus();prev.value=''}
+      }
+    });
+  });
+
+  // Card number formatting
+  const pc=$('#pay-card');
+  if(pc)pc.addEventListener('input',e=>{e.target.value=e.target.value.replace(/\D/g,'').replace(/(.{4})/g,'$1 ').trim().slice(0,19)});
+  const pe=$('#pay-exp');
+  if(pe)pe.addEventListener('input',e=>{let v=e.target.value.replace(/\D/g,'');if(v.length>=2)v=v.slice(0,2)+'/'+v.slice(2);e.target.value=v.slice(0,5)});
+}
+
+// Delegated click handler
+document.addEventListener('click',e=>{
+  const el=e.target.closest('[data-action]');if(!el)return;
+  const action=el.dataset.action;
+  const id=el.dataset.id?parseInt(el.dataset.id):null;
+  const val=el.dataset.val;
+
+  switch(action){
+    case 'event':{
+      const ev=EVENTS.find(e=>e.id===id);if(ev)navigate('event',{event:ev});
+      break;
+    }
+    case 'back':goBack();break;
+    case 'promo-login':S.role='guest';navigate('promo-login');break;
+    case 'promo-signup':navigate('promo-signup');break;
+    case 'guest-home':S.role='guest';S.history=[];navigate('home');break;
+    case 'promo-submit':{
+      const email=$('#pl-email')?.value,pass=$('#pl-pass')?.value;
+      if(!email||!pass){toast('Please fill in all fields','error');return}
+      if(!email.includes('@')){toast('Enter a valid email','error');return}
+      S.role='promoter';S.promoEvents=EVENTS.slice(0,3);toast('Welcome back, Promoter!','success');navigate('manage-events');
+      break;
+    }
+    case 'send-otp':toast('OTP sent to your email (check demo code: 482916)','success');$('#otp-section').style.display='block';break;
+    case 'promo-signup-submit':{
+      const name=$('#ps-name')?.value,email=$('#ps-email')?.value,pass=$('#ps-pass')?.value,otp=$('#ps-otp')?.value;
+      if(!name||!email||!pass){toast('Please fill in all fields','error');return}
+      if(pass.length<8){toast('Password must be at least 8 characters','error');return}
+      if(otp!=='482916'){toast('Invalid OTP code','error');return}
+      S.role='promoter';S.promoEvents=[];toast('Account created successfully!','success');navigate('manage-events');
+      break;
+    }
+    case 'create-event':navigate('create-event');break;
+    case 'proceed-payment':{
+      const title=$('#ce-title')?.value,desc=$('#ce-desc')?.value,date=$('#ce-date')?.value,venue=$('#ce-venue')?.value;
+      if(!title||!date||!venue){toast('Please fill in required fields','error');return}
+      S._pendingEvent={title,desc,date,startTime:$('#ce-start')?.value||'20:00',endTime:$('#ce-end')?.value||'02:00',venue,parish:$('#ce-parish')?.value||'Kingston',genre:$('#ce-genre')?.value||'Party',price:parseInt($('#ce-price')?.value)||0,address:$('#ce-addr')?.value||'',ticketUrl:$('#ce-ticket')?.value||'#',cover:$('#ce-cover')?.value||`https://picsum.photos/seed/${Date.now()}/800/600.jpg`,promoter:{name:'You',avatar:'https://picsum.photos/seed/you/80/80.jpg'}};
+      navigate('payment');
+      break;
+    }
+    case 'process-payment':{
+      const card=$('#pay-card')?.value,exp=$('#pay-exp')?.value,cvc=$('#pay-cvc')?.value;
+      if(!card||card.replace(/\s/g,'').length<16){toast('Enter a valid card number','error');return}
+      if(!exp||exp.length<5){toast('Enter a valid expiry date','error');return}
+      if(!cvc||cvc.length<3){toast('Enter a valid CVC','error');return}
+      // Simulate processing
+      const btn=e.target.closest('.btn');btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Processing...';btn.disabled=true;
+      setTimeout(()=>{
+        const ev=S._pendingEvent;
+        if(ev){
+          const newEvent={id:EVENTS.length+1,...ev,isLive:false,livePhotos:[],gallery:[]};
+          EVENTS.push(newEvent);S.promoEvents.unshift(newEvent);
+        }
+        toast('Payment successful! Event published.','success');
+        btn.innerHTML='<i class="fas fa-lock"></i> Pay $500 JMD';btn.disabled=false;
+        navigate('manage-events');
+      },2000);
+      break;
+    }
+    case 'buy-tickets':{
+      const ev=S.selectedEvent;
+      if(!ev||!ev.ticketUrl||ev.ticketUrl==='#'){
+        openModal(`<h3 style="font-family:var(--font2);font-size:18px;font-weight:700;margin-bottom:16px">Get Your Tickets</h3>
+          <p style="font-size:13px;color:var(--fg3);margin-bottom:18px">Ticket purchase coming soon directly in the app. For now, contact the promoter or visit the event's official ticketing page.</p>
+          <div class="input-group"><label>Your Name</label><input type="text" id="tk-name" placeholder="Full name"></div>
+          <div class="input-group"><label>Email</label><input type="email" id="tk-email" placeholder="your@email.com"></div>
+          <div class="input-group"><label>Phone</label><input type="tel" id="tk-phone" placeholder="+1 876 XXX XXXX"></div>
+          <button class="btn btn-primary" data-action="submit-ticket-interest">Notify Me When Available</button>
+          <div style="text-align:center;margin-top:10px"><span style="font-size:12px;color:var(--fg4)" data-action="close-modal">Cancel</span></div>`);
+      }else{window.open(ev.ticketUrl,'_blank')}
+      break;
+    }
+    case 'submit-ticket-interest':{
+      const n=$('#tk-name')?.value,em=$('#tk-email')?.value,ph=$('#tk-phone')?.value;
+      if(!n||!em){toast('Please enter your name and email','error');return}
+      closeModal();toast('You\'ll be notified when tickets are available','success');
+      break;
+    }
+    case 'close-modal':closeModal();break;
+    case 'directions':{
+      const ev=S.selectedEvent;
+      if(ev)window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ev.address+', '+ev.parish+', Jamaica')}`,'_blank');
+      break;
+    }
+    case 'coming-soon':toast(`${el.dataset.feature} — Coming Soon`,'info');break;
+    case 'lightbox':{
+      const src=el.dataset.src;if(src){$('#lightbox-img').src=src;$('#lightbox').classList.add('show')}
+      break;
+    }
+    case 'live-feed':{S._liveFeedId=id;navigate('live-feed');break;}
+    case 'upload-photo':{
+      const evId=id||S.selectedEvent?.id;const ev=EVENTS.find(e=>e.id===evId);if(!ev)break;
+      // Rate limit check
+      if(S.uploadTimers[evId]&&Date.now()-S.uploadTimers[evId]<300000){
+        const wait=Math.ceil((300000-(Date.now()-S.uploadTimers[evId]))/60000);
+        toast(`Please wait ${wait} min between uploads`,'error');break;
+      }
+      // Gallery cap check
+      if(ev.livePhotos.length>=200){toast('Gallery is full (200 photos max)','error');break;}
+      const input=document.createElement('input');input.type='file';input.accept='image/*';input.capture='environment';
+      input.onchange=async()=>{
+        const file=input.files[0];if(!file)return;
+        openModal(`<h3 style="font-family:var(--font2);font-size:18px;font-weight:700;margin-bottom:16px">Uploading Photo</h3>
+          <div style="text-align:center;margin-bottom:16px"><img src="${URL.createObjectURL(file)}" style="max-width:100%;max-height:200px;object-fit:cover;border-radius:var(--rs)" alt="Preview"></div>
+          <div style="font-size:13px;color:var(--fg3);margin-bottom:6px">Compressing image...</div>
+          <div class="progress-bar"><div class="fill" id="upload-progress" style="width:0%"></div></div>
+          <div style="font-size:11px;color:var(--fg4);margin-top:8px" id="upload-status">Analyzing image...</div>`);
+        // Simulate compression
+        const pb=$('#upload-progress');const st=$('#upload-status');
+        let prog=0;const iv=setInterval(()=>{prog+=Math.random()*20+5;if(prog>40){clearInterval(iv);st.textContent='Checking image quality...';analyzeAndUpload(file,ev,evId,pb,st)}else{pb.style.width=prog+'%'}},200);
+      };
+      input.click();
+      break;
+    }
+    case 'clear-search':S.searchQuery='';render();break;
+    case 'filter-parish':S.filters.parish=S.filters.parish===val?'':val;render();break;
+    case 'filter-genre':S.filters.genre=S.filters.genre===val?'':val;render();break;
+    case 'see-all':{
+      if(val==='live')S.filters={parish:'',genre:'',date:''};
+      navigate('search');break;
+    }
+    case 'event-options':{
+      openModal(`<h3 style="font-family:var(--font2);font-size:18px;font-weight:700;margin-bottom:16px">Event Options</h3>
+        <button class="btn btn-secondary" style="margin-bottom:8px" data-action="edit-event" data-id="${id}"><i class="fas fa-edit"></i> Edit Event</button>
+        <button class="btn btn-danger" data-action="delete-event" data-id="${id}"><i class="fas fa-trash"></i> Delete Event</button>
+        <div style="text-align:center;margin-top:10px"><span style="font-size:12px;color:var(--fg4)" data-action="close-modal">Cancel</span></div>`);
+      break;
+    }
+    case 'edit-event':{closeModal();toast('Edit functionality — select event in form','info');navigate('create-event');break;}
+    case 'delete-event':{
+      const idx=S.promoEvents.findIndex(e=>e.id===id);
+      if(idx>-1){S.promoEvents.splice(idx,1);closeModal();toast('Event deleted','success');render()}
+      break;
+    }
+    case 'admin-login':navigate('admin-login');break;
+    case 'admin-submit':{
+      const btn=e.target.closest('.btn');
+      if(btn.textContent.includes('2FA')){
+        // Verify OTP
+        const digits=[...$$('.otp-digit')].map(i=>i.value).join('');
+        if(digits!=='482916'){toast('Invalid 2FA code','error');return}
+        S.role='admin';toast('Welcome, Admin','success');navigate('admin');
+      }else{
+        // Send 2FA
+        const email=$('#al-email')?.value,pass=$('#al-pass')?.value;
+        if(!email||!pass){toast('Fill in all fields','error');return}
+        $('#otp-section').style.display='block';btn.textContent='Verify 2FA Code';toast('2FA code sent (demo: 482916)','info');
+      }
+      break;
+    }
+    case 'admin-logout':case 'admin-tab':{
+      if(action==='admin-logout'){S.role='guest';S.history=[];navigate('home')}
+      else{S.adminTab=val;render()}
+      break;
+    }
+    case 'admin-delete':{
+      const idx=EVENTS.findIndex(e=>e.id===id);if(idx>-1){EVENTS.splice(idx,1);toast('Event deleted','success');render()}
+      break;
+    }
+    case 'admin-toggle-user':toast('User status updated','success');break;
+    case 'admin-refund':toast('Refund initiated','success');break;
+  }
+
+  // Nav items
+  const navEl=e.target.closest('[data-nav]');if(navEl){
+    const target=navEl.dataset.nav;
+    if(target==='coming-soon'){toast(`${navEl.dataset.feature} — Coming Soon`,'info');return}
+    if(target==='admin-login'){navigate('admin-login');return}
+    if(S.role==='admin'&&(target==='admin-login')){S.role='guest';S.history=[];navigate('home');return}
+    S.history=[];navigate(target);
+  }
+});
+
+async function analyzeAndUpload(file,ev,evId,pb,st){
+  // Analyze image for blank rejection
+  try{
+    await new Promise((resolve,reject)=>{
+      const img=new Image();img.onload=resolve;img.onerror=reject;img.src=URL.createObjectURL(file);
+    });
+    // Draw to canvas for analysis
+    const canvas=document.createElement('canvas');const ctx=canvas.getContext('2d');
+    const img=new Image();
+    img.onload=()=>{
+      canvas.width=50;canvas.height=50;ctx.drawImage(img,0,0,50,50);
+      const data=ctx.getImageData(0,0,50,50).data;
+      let tR=0,tG=0,tB=0;const px=data.length/4;
+      for(let i=0;i<data.length;i+=4){tR+=data[i];tG+=data[i+1];tB+=data[i+2]}
+      const aR=tR/px,aG=tG/px,aB=tB/px;let variance=0;
+      for(let i=0;i<data.length;i+=4)variance+=(data[i]-aR)**2+(data[i+1]-aG)**2+(data[i+2]-aB)**2;
+      variance/=px;
+      if(variance<500){closeModal();toast('Image appears blank or uniform — rejected','error');return}
+      // Simulate upload
+      st.textContent='Uploading...';
+      let prog=parseFloat(pb.style.width);
+      const iv2=setInterval(()=>{
+        prog+=Math.random()*15+10;
+        if(prog>=100){
+          clearInterval(iv2);pb.style.width='100%';st.textContent='Complete!';
+          // Compress and add
+          const c2=document.createElement('canvas');const cx=c2.getContext('2d');
+          let w=img.width,h=img.height;const mx=1200;
+          if(w>mx||h>mx){const r=Math.min(mx/w,mx/h);w*=r;h*=r}
+          c2.width=w;c2.height=h;cx.drawImage(img,0,0,w,h);
+          let dataUrl=c2.toDataURL('image/jpeg',0.7);
+          // Trim to <500kb equivalent
+          while(dataUrl.length>700000&&dataUrl.includes('image/jpeg')){
+            // Just use it as is for demo
+            break;
+          }
+          ev.livePhotos.push(dataUrl);
+          S.uploadTimers[evId]=Date.now();
+          setTimeout(()=>{closeModal();toast('Photo uploaded successfully!','success');render()},500);
+        }else{pb.style.width=prog+'%'}
+      },200);
+    };
+    img.src=URL.createObjectURL(file);
+  }catch(err){closeModal();toast('Failed to process image','error')}
+}
+
+/* ============================================================
+   PARTICLES BACKGROUND
+   ============================================================ */
+const canvas=$('#bg-canvas');const ctx=canvas.getContext('2d');
+let particles=[];
+function initParticles(){
+  const app=$('#app');canvas.width=app.clientWidth;canvas.height=app.clientHeight;
+  particles=[];for(let i=0;i<30;i++){
+    particles.push({x:Math.random()*canvas.width,y:Math.random()*canvas.height,r:Math.random()*1.5+0.5,vx:(Math.random()-.5)*.3,vy:(Math.random()-.5)*.3,o:Math.random()*.3+.1});
+  }
+}
+function drawParticles(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(!S.showParticles){requestAnimationFrame(drawParticles);return}
+  particles.forEach(p=>{
+    p.x+=p.vx;p.y+=p.vy;
+    if(p.x<0)p.x=canvas.width;if(p.x>canvas.width)p.x=0;
+    if(p.y<0)p.y=canvas.height;if(p.y>canvas.height)p.y=0;
+    ctx.beginPath();ctx.arc(p.x,p.y,Math.max(0.5,p.r),0,Math.PI*2);
+    ctx.fillStyle=`rgba(0,255,136,${p.o})`;ctx.fill();
+  });
+  // Draw subtle connections
+  for(let i=0;i<particles.length;i++){
+    for(let j=i+1;j<particles.length;j++){
+      const dx=particles[i].x-particles[j].x,dy=particles[i].y-particles[j].y;
+      const d=Math.sqrt(dx*dx+dy*dy);
+      if(d<120){ctx.beginPath();ctx.moveTo(particles[i].x,particles[i].y);ctx.lineTo(particles[j].x,particles[j].y);ctx.strokeStyle=`rgba(0,255,136,${.06*(1-d/120)})`;ctx.lineWidth=.5;ctx.stroke()}
+    }
+  }
+  requestAnimationFrame(drawParticles);
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+function init(){
+  updateClock();setInterval(updateClock,10000);
+  initParticles();drawParticles();
+  window.addEventListener('resize',initParticles);
+  render();
+  // Auto-advance from splash
+  setTimeout(()=>{if(S.screen==='splash')navigate('home')},2800);
+}
+init();
+</script>
+</body>
+</html>

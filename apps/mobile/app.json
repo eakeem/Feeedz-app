@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "feeedz",
+    "slug": "feeedz",
+    "scheme": "feeedz",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.feeedz.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "feeedz uses your camera so you can add one live event photo.",
+        "NSPhotoLibraryUsageDescription": "feeedz lets you choose one event photo from your library.",
+        "NSLocationWhenInUseUsageDescription": "feeedz uses your location to show events near you in Jamaica."
+      }
+    },
+    "android": {
+      "package": "com.feeedz.app",
+      "permissions": ["CAMERA", "READ_MEDIA_IMAGES", "ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"]
+    },
+    "extra": {
+      "apiUrl": "http://localhost:3000/v1",
+      "supabaseUrl": "${SUPABASE_URL}",
+      "supabaseAnonKey": "${SUPABASE_ANON_KEY}",
+      "googleMapsApiKey": "${GOOGLE_MAPS_API_KEY}"
+    }
+  }
+}

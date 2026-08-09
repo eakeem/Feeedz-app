@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum EventStatus {
+  DRAFT
+  PENDING_PAYMENT
+  PUBLISHED
+  REJECTED
+  DELETED
+}
+
+enum ModerationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  REPORTED
+}
+
+model PromoterProfile {
+  id          String   @id @default(cuid())
+  supabaseId  String   @unique
+  email       String   @unique
+  displayName String
+  bannedAt    DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  events      Event[]
+}
+
+model Event {
+  id              String      @id @default(cuid())
+  promoterId      String
+  promoter        PromoterProfile @relation(fields: [promoterId], references: [id], onDelete: Cascade)
+  title           String
+  description     String
+  eventDate       DateTime
+  startTime       String
+  endTime         String
+  endsAt          DateTime
+  deleteAfter     DateTime
+  venue           String
+  parish          String
+  address         String
+  latitude        Decimal?    @db.Decimal(9, 6)
+  longitude       Decimal?    @db.Decimal(9, 6)
+  genre           String
+  priceJmd        Int
+  ticketUrl       String?
+  coverObjectKey  String?
+  status          EventStatus @default(PENDING_PAYMENT)
+  stripeSessionId String?     @unique
+  publishedAt     DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  photos          LivePhoto[]
+  tickets         TicketInterest[]
+  payments        Payment[]
+
+  @@index([status, eventDate])
+  @@index([parish, genre])
+  @@index([deleteAfter])
+}
+
+model LivePhoto {
+  id               String           @id @default(cuid())
+  eventId          String
+  event            Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  ipHash           String
+  objectKey        String
+  moderationStatus ModerationStatus @default(PENDING)
+  reportCount      Int              @default(0)
+  createdAt        DateTime         @default(now())
+
+  @@index([eventId, createdAt])
+  @@unique([eventId, ipHash])
+}
+
+model UploadRateLimit {
+  id        String   @id @default(cuid())
+  eventId   String
+  ipHash    String
+  createdAt DateTime @default(now())
+
+  @@index([eventId, ipHash, createdAt])
+}
+
+model TicketInterest {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  name      String
+  email     String
+  phone     String?
+  createdAt DateTime @default(now())
+}
+
+model Payment {
+  id              String   @id @default(cuid())
+  eventId         String
+  event           Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  stripePaymentId String   @unique
+  amountJmd       Int
+  refundedAt      DateTime?
+  createdAt       DateTime @default(now())
+}
+
+model BannedIp {
+  id        String   @id @default(cuid())
+  ipHash    String   @unique
+  reason    String
+  createdAt DateTime @default(now())
+}
+
+model AdminUser {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actor     String
+  action    String
+  target    String
+  metadata  Json?
+  createdAt DateTime @default(now())
+}
