@@ -34,6 +34,60 @@ model PromoterProfile {
   events      Event[]
 }
 
+enum Role {
+  USER
+  PROMOTER
+  ADMIN
+}
+
+model User {
+  id          String   @id @default(cuid())
+  supabaseId  String   @unique
+  email       String   @unique
+  name        String?
+  avatarUrl   String?
+  role        Role     @default(USER)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  favorites   Favorite[]
+  rsvps       Rsvp[]
+  pushTokens  PushToken[]
+  events      Event[]    @relation("UserEvents") // If users can organize their own events, though might need to reconcile with PromoterProfile later
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  eventId   String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, eventId])
+}
+
+model Rsvp {
+  id        String   @id @default(cuid())
+  userId    String
+  eventId   String
+  status    String   @default("GOING") // Can be GOING, MAYBE, etc.
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, eventId])
+}
+
+model PushToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  platform  String   // "ios", "android", "web"
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
 model Event {
   id              String      @id @default(cuid())
   promoterId      String
@@ -62,6 +116,10 @@ model Event {
   photos          LivePhoto[]
   tickets         TicketInterest[]
   payments        Payment[]
+  favorites       Favorite[]
+  rsvps           Rsvp[]
+  organizer       User?       @relation("UserEvents", fields: [organizerId], references: [id])
+  organizerId     String?
 
   @@index([status, eventDate])
   @@index([parish, genre])

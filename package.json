@@ -10,6 +10,7 @@
   "scripts": {
     "mobile": "npm run start -w @feeedz/mobile",
     "api": "npm run start:dev -w @feeedz/api",
+    "build": "npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present"
   },
@@ -22,6 +23,10 @@
     "@nestjs/platform-express": "^11.1.28"
   },
   "dependencies": {
-    "@nestjs/platform-express": "^11.1.28"
+    "@nestjs/platform-express": "^11.1.28",
+    "@prisma/client": "^7.9.1",
+    "@supabase/supabase-js": "^2.112.2",
+    "expo-server-sdk": "^7.1.0",
+    "node-cron": "^4.6.0"
   }
 }
