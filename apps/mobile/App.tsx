@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Animated, Dimensions, Easing, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { Alert, Animated, Dimensions, Easing, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -7,6 +7,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { StatusBar } from 'expo-status-bar';
+import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import { apiRequest, supabase } from './src/api/client';
 import { demoEvents, EventItem } from './src/data/events';
 import { colors, genreColor, genres, parishes } from './src/theme';
@@ -42,11 +43,56 @@ const GRID_COL_WIDTH = (SCREEN_WIDTH - 40 - GRID_GAP) / 2;
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('home');
+  const [screenHistory, setScreenHistory] = useState<Screen[]>([]);
   const [events, setEvents] = useState(demoEvents);
   const [selectedEvent, setSelectedEvent] = useState<EventItem>(demoEvents[0]);
   const [query, setQuery] = useState('');
   const [parish, setParish] = useState('');
   const [genre, setGenre] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+
+  const navigateTo = (newScreen: Screen) => {
+    setScreenHistory(prev => [...prev, screen]);
+    setScreen(newScreen);
+  };
+
+  const goBack = () => {
+    setScreenHistory(prev => {
+      const history = [...prev];
+      const previousScreen = history.pop();
+      if (previousScreen) {
+        setScreen(previousScreen);
+      }
+      return history;
+    });
+  };
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 1000);
+  }, []);
+
+  const panRef = useRef(new Animated.Value(0)).current;
+
+  const onGestureEvent = Animated.event(
+    [{ nativeEvent: { translationX: panRef } }],
+    { useNativeDriver: true }
+  );
+
+  const onHandlerStateChange = (event: any) => {
+    if (event.nativeEvent.state === State.END) {
+      if (event.nativeEvent.translationX > 50 && event.nativeEvent.velocityX > 500) {
+        if (screenHistory.length > 0) goBack();
+      }
+      Animated.timing(panRef, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }
+  };
   const [ticketModalVisible, setTicketModalVisible] = useState(false);
   const [promoterEmail, setPromoterEmail] = useState('');
   const [promoterOtp, setPromoterOtp] = useState('');
@@ -107,7 +153,7 @@ export default function App() {
 
   function openEvent(event: EventItem) {
     setSelectedEvent(event);
-    setScreen('details');
+    navigateTo('details');
   }
 
   function toggleFavorite(eventId: string) {
@@ -125,7 +171,38 @@ export default function App() {
   }
 
   async function uploadLivePhoto() {
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: 'images', quality: 0.8 });
+    const isLive = new Date(`${selectedEvent.date}T${selectedEvent.startTime}`) <= new Date();
+    
+    if (!isLive) {
+      Alert.alert('Not Live Yet', 'You can only upload live photos when the event is currently live.');
+      return;
+    }
+
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Location permission is required to upload live photos.');
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({});
+      // Dummy check for distance – in reality you would calculate distance between location.coords and event.coordinates
+      if (!location.coords) {
+        Alert.alert('Location Error', 'Unable to determine your current location.');
+        return;
+      }
+    } catch (e) {
+      Alert.alert('Location Error', 'Unable to fetch your location to verify you are at the event.');
+      return;
+    }
+
+    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+    if (permissionResult.granted === false) {
+      Alert.alert("Permission Denied", "You've refused to allow this app to access your camera!");
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({ mediaTypes: 'images', quality: 0.8 });
     if (result.canceled) return;
 
     const compressed = await ImageManipulator.manipulateAsync(result.assets[0].uri, [{ resize: { width: 1200 } }], {
@@ -199,30 +276,45 @@ export default function App() {
   }
 
   return (
-    <SafeAreaProvider>
-      <SafeAreaView style={styles.safeArea}>
-        <StatusBar style="light" />
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <SafeAreaView style={styles.safeArea}>
+          <StatusBar style="light" />
         {showSplash && <SplashScreen />}
-        <View style={styles.shell}>
-          {screen === 'home' && <HomeScreen events={parishEvents} userParish={userParish} locationLoading={locationLoading} favorites={favorites} onToggleFavorite={toggleFavorite} onOpen={openEvent} />}
-          {screen === 'events' && <EventsScreen events={filteredEvents} query={query} setQuery={setQuery} genre={genre} setGenre={setGenre} parish={parish} setParish={setParish} favorites={favorites} onToggleFavorite={toggleFavorite} onOpen={openEvent} />}
-          {screen === 'favorites' && <FavoritesScreen events={favoriteEvents} favorites={favorites} onToggleFavorite={toggleFavorite} onOpen={openEvent} />}
-          {screen === 'details' && <DetailsScreen event={selectedEvent} isFavorite={favorites.has(selectedEvent.id)} onToggleFavorite={() => toggleFavorite(selectedEvent.id)} onBack={() => setScreen('events')} onBuyTickets={buyTickets} onDirections={openDirections} onUploadPhoto={uploadLivePhoto} />}
-          {screen === 'promoter' && <PromoterScreen onCreate={() => setScreen('create')} onManage={() => setScreen('manage')} onAuth={() => setScreen('promoter-auth')} />}
-          {screen === 'promoter-auth' && <PromoterAuthScreen email={promoterEmail} name={promoterName} otp={promoterOtp} setEmail={setPromoterEmail} setName={setPromoterName} setOtp={setPromoterOtp} onSendOtp={sendPromoterOtp} onVerify={verifyPromoterOtp} />}
-          {screen === 'create' && <CreateEventScreen onPublished={(event) => { setEvents((currentEvents) => [event, ...currentEvents]); setPromoterEvents((currentEvents) => [event, ...currentEvents]); setScreen('manage'); }} />}
-          {screen === 'manage' && <ManageEventsScreen events={promoterEvents} onCreate={() => setScreen('create')} onOpen={openEvent} />}
-          {screen === 'profile' && <ProfileScreen onPromoter={() => setScreen('promoter')} />}
-        </View>
+        
+        <PanGestureHandler
+          activeOffsetX={[-20, 20]} // required threshold
+          onGestureEvent={onGestureEvent}
+          onHandlerStateChange={onHandlerStateChange}
+        >
+          <Animated.View style={[styles.shell, { transform: [{ translateX: panRef }] }]}>
+            <ScrollView
+              contentContainerStyle={{ flexGrow: 1 }}
+              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />}
+            >
+              {screen === 'home' && <HomeScreen events={parishEvents} userParish={userParish} locationLoading={locationLoading} favorites={favorites} onToggleFavorite={toggleFavorite} onOpen={openEvent} />}
+              {screen === 'events' && <EventsScreen events={filteredEvents} query={query} setQuery={setQuery} genre={genre} setGenre={setGenre} parish={parish} setParish={setParish} favorites={favorites} onToggleFavorite={toggleFavorite} onOpen={openEvent} />}
+              {screen === 'favorites' && <FavoritesScreen events={favoriteEvents} favorites={favorites} onToggleFavorite={toggleFavorite} onOpen={openEvent} />}
+              {screen === 'details' && <DetailsScreen event={selectedEvent} isFavorite={favorites.has(selectedEvent.id)} onToggleFavorite={() => toggleFavorite(selectedEvent.id)} onBack={goBack} onBuyTickets={buyTickets} onDirections={openDirections} onUploadPhoto={uploadLivePhoto} />}
+              {screen === 'promoter' && <PromoterScreen onCreate={() => navigateTo('create')} onManage={() => navigateTo('manage')} onAuth={() => navigateTo('promoter-auth')} />}
+              {screen === 'promoter-auth' && <PromoterAuthScreen email={promoterEmail} name={promoterName} otp={promoterOtp} setEmail={setPromoterEmail} setName={setPromoterName} setOtp={setPromoterOtp} onSendOtp={sendPromoterOtp} onVerify={verifyPromoterOtp} />}
+              {screen === 'create' && <CreateEventScreen onPublished={(event) => { setEvents((currentEvents) => [event, ...currentEvents]); setPromoterEvents((currentEvents) => [event, ...currentEvents]); navigateTo('manage'); }} />}
+              {screen === 'manage' && <ManageEventsScreen events={promoterEvents} onCreate={() => navigateTo('create')} onOpen={openEvent} />}
+              {screen === 'profile' && <ProfileScreen onPromoter={() => navigateTo('promoter')} />}
+            </ScrollView>
+          </Animated.View>
+        </PanGestureHandler>
+
         <TicketInterestModal visible={ticketModalVisible} onClose={() => setTicketModalVisible(false)} onSubmit={submitTicketInterest} />
         <View style={styles.nav}>
-          <NavButton active={screen === 'home'} label="Feed" iconName="home" onPress={() => setScreen('home')} />
-          <NavButton active={screen === 'events'} label="Events" iconName="calendar" onPress={() => setScreen('events')} />
-          <NavButton active={screen === 'favorites'} label="Favorites" iconName="heart" onPress={() => setScreen('favorites')} />
-          <NavButton active={screen === 'profile'} label="Profile" iconName="person" onPress={() => setScreen('profile')} />
+          <NavButton active={screen === 'home'} label="Feed" iconName="flame" onPress={() => navigateTo('home')} />
+          <NavButton active={screen === 'events'} label="Events" iconName="calendar" onPress={() => navigateTo('events')} />
+          <NavButton active={screen === 'favorites'} label="Favorites" iconName="heart" onPress={() => navigateTo('favorites')} />
+          <NavButton active={screen === 'profile'} label="Profile" iconName="person" onPress={() => navigateTo('profile')} />
         </View>
       </SafeAreaView>
     </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 
@@ -685,12 +777,71 @@ function ManageEventsScreen({ events, onCreate, onOpen }: { events: EventItem[];
 
 /* ============ PROFILE ============ */
 function ProfileScreen({ onPromoter }: { onPromoter: () => void }) {
-  return <View style={[styles.content, styles.center]}>
-    <Text style={styles.logo}>feeedz</Text>
-    <Text style={styles.meta}>Guest browsing events in Jamaica</Text>
-    <PrimaryButton label="Promoter Login / Signup" onPress={onPromoter} />
-    <Text style={styles.legal}>Privacy Policy • Terms • Support</Text>
-  </View>;
+  const [showSettings, setShowSettings] = useState(false);
+  const [notifications, setNotifications] = useState(true);
+  const [locationCache, setLocationCache] = useState(true);
+
+  return (
+    <ScrollView contentContainerStyle={[styles.content]}>
+      <View style={styles.center}>
+        <Text style={[styles.logo, { marginTop: 40 }]}>feeedz</Text>
+        <Text style={styles.meta}>Guest browsing events in Jamaica</Text>
+        <PrimaryButton label="Promoter Login / Signup" onPress={onPromoter} />
+      </View>
+
+      <Pressable onPress={() => setShowSettings(!showSettings)} style={{ marginTop: 40, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Text style={styles.subheading}>Settings</Text>
+        <Ionicons name={showSettings ? "chevron-up" : "chevron-down"} size={24} color={colors.text} />
+      </Pressable>
+
+      {showSettings && (
+        <View style={{ marginTop: 10 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderColor: '#222' }}>
+            <Text style={{ color: 'white', fontWeight: '800' }}>Push Notifications</Text>
+            <Pressable 
+              onPress={() => setNotifications(!notifications)}
+              style={{ width: 50, height: 28, backgroundColor: notifications ? colors.accent : '#333', borderRadius: 14, justifyContent: 'center', padding: 2 }}
+            >
+              <View style={{ width: 24, height: 24, backgroundColor: 'white', borderRadius: 12, alignSelf: notifications ? 'flex-end' : 'flex-start' }} />
+            </Pressable>
+          </View>
+
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderColor: '#222' }}>
+            <Text style={{ color: 'white', fontWeight: '800' }}>Cache Parishes & Genres</Text>
+            <Pressable 
+              onPress={() => setLocationCache(!locationCache)}
+              style={{ width: 50, height: 28, backgroundColor: locationCache ? colors.accent : '#333', borderRadius: 14, justifyContent: 'center', padding: 2 }}
+            >
+              <View style={{ width: 24, height: 24, backgroundColor: 'white', borderRadius: 12, alignSelf: locationCache ? 'flex-end' : 'flex-start' }} />
+            </Pressable>
+          </View>
+          
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderColor: '#222' }}>
+            <Text style={{ color: 'white', fontWeight: '800' }}>Dark Mode</Text>
+            <Text style={{ color: colors.dim, fontWeight: '800' }}>System Default</Text>
+          </View>
+
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderColor: '#222' }}>
+            <Text style={{ color: 'red', fontWeight: '800' }}>Clear App Cache</Text>
+            <Ionicons name="trash-outline" size={20} color="red" />
+          </View>
+        </View>
+      )}
+
+      <View style={{ marginTop: 40, alignItems: 'center', gap: 15 }}>
+        <Pressable onPress={() => Linking.openURL('https://feeedz.com/privacy')}>
+          <Text style={styles.legal}>Privacy Policy</Text>
+        </Pressable>
+        <Pressable onPress={() => Linking.openURL('https://feeedz.com/terms')}>
+          <Text style={styles.legal}>Terms of Service</Text>
+        </Pressable>
+        <Pressable onPress={() => Linking.openURL('mailto:support@feeedz.com')}>
+          <Text style={styles.legal}>Support</Text>
+        </Pressable>
+        <Text style={[styles.legal, { marginTop: 10 }]}>Version 1.0.0 (Build 42)</Text>
+      </View>
+    </ScrollView>
+  );
 }
 
 /* ============ TICKET MODAL ============ */

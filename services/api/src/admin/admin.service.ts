@@ -32,7 +32,7 @@ export class AdminService {
   async deleteEvent(id: string) {
     const event = await this.prisma.event.findUnique({ where: { id }, include: { photos: true } });
     if (!event) throw new NotFoundException('Event not found');
-    await Promise.all(event.photos.map((photo) => this.r2.deleteObject(photo.objectKey)));
+    await Promise.all(event.photos.map((photo: any) => this.r2.deleteObject(photo.objectKey)));
     if (event.coverObjectKey) await this.r2.deleteObject(event.coverObjectKey);
     return this.prisma.event.delete({ where: { id } });
   }

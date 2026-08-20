@@ -17,13 +17,21 @@
     },
     "android": {
       "package": "com.feeedz.app",
-      "permissions": ["CAMERA", "READ_MEDIA_IMAGES", "ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"]
+      "permissions": [
+        "CAMERA",
+        "READ_MEDIA_IMAGES",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
     },
     "extra": {
       "apiUrl": "http://localhost:3000/v1",
       "supabaseUrl": "${SUPABASE_URL}",
       "supabaseAnonKey": "${SUPABASE_ANON_KEY}",
       "googleMapsApiKey": "${GOOGLE_MAPS_API_KEY}"
-    }
+    },
+    "plugins": [
+      "expo-image"
+    ]
   }
 }

@@ -5,7 +5,7 @@ import { PrismaClient } from '@prisma/client';
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   async onModuleInit() {
     // Don't block startup if the database is unreachable (e.g. no .env configured yet)
-    this.$connect().catch((err) => {
+    this.$connect().catch((err: any) => {
       console.warn('Prisma connection deferred:', err.message);
     });
   }

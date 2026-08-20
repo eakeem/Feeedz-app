@@ -16,7 +16,7 @@ export class CleanupService {
     });
 
     for (const event of expiredEvents) {
-      await Promise.all(event.photos.map((photo) => this.r2.deleteObject(photo.objectKey)));
+      await Promise.all(event.photos.map((photo: any) => this.r2.deleteObject(photo.objectKey)));
       if (event.coverObjectKey) await this.r2.deleteObject(event.coverObjectKey);
       await this.prisma.event.update({ where: { id: event.id }, data: { status: EventStatus.DELETED } });
       await this.prisma.event.delete({ where: { id: event.id } });
